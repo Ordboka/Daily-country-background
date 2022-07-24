@@ -6,3 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+wallpaper = "3.2.0"
+chrono = "0.4"
+rand = "0.8.4"
+image = "0.24.3"
+imageproc = "0.23.0"
+rusttype = "0.9.2"
