@@ -1,76 +1,28 @@
+mod date;
+mod national_day;
+mod parse_error;
+mod parse_file;
+
 use image;
 use imageproc::drawing;
 use imageproc::rect;
+use national_day::NationalDay;
 use rusttype::{Font, Scale};
 use std::cmp;
 use std::collections::HashMap;
-use std::fmt;
 use std::fs;
-use std::fs::{DirEntry, File};
-use std::io::{BufRead, BufReader};
+use std::fs::DirEntry;
 use std::path::Path;
 use std::path::PathBuf;
 
 use rand::prelude::SliceRandom;
 use rand::Rng;
 
-use chrono::{Datelike, TimeZone, Utc};
+use chrono::{Datelike, Utc};
+
+use date::Date;
 
 use wallpaper;
-
-#[derive(Debug)]
-struct NationalDay {
-    country: String,
-    date: Date,
-    extra_info: String,
-}
-
-#[derive(Debug, Hash, Eq, PartialEq, Copy, Clone)]
-struct Date {
-    day: u32,
-    month: u32,
-}
-
-impl fmt::Display for Date {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let date_time = chrono::Local.ymd(2022, self.month, self.day);
-        fmt.write_str(&date_time.format("%B %e").to_string())?;
-        let today = Utc::now();
-        if today.day() == self.day && today.month() == self.month {
-            fmt.write_str(" (today)")?;
-        }
-        Ok(())
-    }
-}
-
-fn read_country_list_to_date_hash_map(file_path: &Path) -> HashMap<Date, Vec<NationalDay>> {
-    let mut countries: HashMap<Date, Vec<NationalDay>> = HashMap::new();
-    let file = File::open(file_path).expect("Couldn't open national days file");
-    let buf_reader = BufReader::new(file);
-    for line in buf_reader.lines() {
-        let line = line.expect("Cannot read line from file");
-        let tokens: Vec<&str> = line.splitn(3, ",").collect();
-        let country = tokens[0];
-        let raw_date = tokens[1];
-        let extra_info = tokens[2].replace('"', "");
-        let date_tokens: Vec<&str> = raw_date.split("/").collect();
-        let day = date_tokens[0]
-            .parse::<u32>()
-            .expect("Day could not be parsed");
-        let month = date_tokens[1]
-            .parse::<u32>()
-            .expect("Month could not be parsed");
-        let date = Date { day, month };
-        let countries_for_date = countries.entry(date).or_insert(Vec::new());
-        let national_day = NationalDay {
-            country: country.to_string(),
-            date,
-            extra_info: extra_info.to_string(),
-        };
-        countries_for_date.push(national_day);
-    }
-    countries
-}
 
 fn get_countries_for_current_day<'a>(
     country_date_hash_map: &'a HashMap<Date, Vec<NationalDay>>,
@@ -240,7 +192,7 @@ fn set_wallpaper_for_country(country: &NationalDay) -> Result<(), &str> {
 
 fn main() {
     let national_days_path = Path::new("national_days.csv");
-    let country_date_hash_map = read_country_list_to_date_hash_map(national_days_path);
+    let country_date_hash_map = parse_file::read_country_list_to_date_hash_map(national_days_path);
     match get_countries_for_current_day(&country_date_hash_map) {
         Some(nations) => match nations.choose(&mut rand::thread_rng()) {
             Some(nation) => {
